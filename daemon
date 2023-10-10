@@ -1,0 +1,77 @@
+<?php
+
+require __DIR__ . '/autoload.php';
+
+use App\Daemon;
+use App\Backup;
+use App\Crontab;
+use eru123\venv\VirtualEnv;
+
+$path = venv('config.path');
+if (!$path) {
+    throw new Exception('Config path not found');
+}
+
+Daemon::precallback(function () use ($path) {
+    clearstatcache(true, $path);
+    $last_modified = filemtime($path);
+    $date = DateTime::createFromFormat('U', time())->format('Y-m-d H:i:s');
+    // echo "[$date] Config last modified: $last_modified" . PHP_EOL;
+    if (venv('config.last_modified') === $last_modified) {
+        return;
+    }
+
+    if (venv('config.last_modified') === null) {
+        echo "[$date] Initialized" . PHP_EOL;
+    } else {
+        echo "[$date] Config changes detected. Reloading..." . PHP_EOL;
+    }
+
+    Daemon::clear();
+    $h = fopen($path, 'r');
+    $buffer = '';
+    while (!feof($h))
+        $buffer .= fread($h, 8192);
+    fclose($h);
+    $data = json_decode($buffer, true);
+    unset($buffer);
+    venv_set('config.data', is_array($data) ? $data : []);
+    unset($data);
+    venv_set('config.last_modified', $last_modified);
+
+    $backups = venv('config.data.backups', []);
+    $providers = venv('config.data.providers', []);
+
+
+    if (!is_array($backups)) {
+        $backups = [];
+    }
+
+    if (!is_array($providers)) {
+        $providers = [];
+    }
+
+    // $parallel = [];
+    foreach ($backups as $backup) {
+        // $wait = VirtualEnv::get($backup, 'wait', true);
+
+        // if (!$wait) {
+        //     $parallel[] = $backup;
+        //     continue;
+        // }
+
+        $callback = Backup::create($backup, [], $providers);
+        Daemon::create($callback);
+    }
+
+    // if (!count($parallel)) {
+    //     return;
+    // }
+
+    // foreach ($parallel as $backup) {
+        // $callback = Backup::runner($backup, [], $providers);
+        // Daemon::create($callback);
+    // }
+});
+
+Daemon::run();
