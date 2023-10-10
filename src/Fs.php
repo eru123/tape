@@ -42,4 +42,20 @@ final class Fs
 
         return false;
     }
+
+    final static function touch(string $path): false|string
+    {
+        if (!file_exists($path)) {
+            $path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+            $segm = explode(DIRECTORY_SEPARATOR, $path);
+            array_pop($segm);
+            $dir = implode(DIRECTORY_SEPARATOR, $segm);
+            static::mkdir($dir);
+            if (touch($path)) {
+                return realpath($path);
+            }
+        }
+
+        return realpath($path);
+    }
 }
