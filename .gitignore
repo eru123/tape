@@ -10,3 +10,4 @@ directory/
 backups/
 .env
 config.json
+*.log
