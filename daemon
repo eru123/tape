@@ -16,7 +16,6 @@ Daemon::precallback(function () use ($path) {
     clearstatcache(true, $path);
     $last_modified = filemtime($path);
     $date = DateTime::createFromFormat('U', time())->format('Y-m-d H:i:s');
-    // echo "[$date] Config last modified: $last_modified" . PHP_EOL;
     if (venv('config.last_modified') === $last_modified) {
         return;
     }
@@ -51,27 +50,10 @@ Daemon::precallback(function () use ($path) {
         $providers = [];
     }
 
-    // $parallel = [];
-    foreach ($backups as $backup) {
-        // $wait = VirtualEnv::get($backup, 'wait', true);
-
-        // if (!$wait) {
-        //     $parallel[] = $backup;
-        //     continue;
-        // }
-
-        $callback = Backup::create($backup, [], $providers);
+    foreach ($backups as $k => $v) {
+        $callback = Backup::createCallback($k);
         Daemon::create($callback);
     }
-
-    // if (!count($parallel)) {
-    //     return;
-    // }
-
-    // foreach ($parallel as $backup) {
-        // $callback = Backup::runner($backup, [], $providers);
-        // Daemon::create($callback);
-    // }
 });
 
 Daemon::run();
