@@ -9,3 +9,9 @@ venv_set('config.name', venv('CONFIG_NAME', 'user.json'));
 venv_set('config.dir', venv('CONFIG_DIR', __DIR__));
 venv_set('config.path', Fs::join(venv('config.dir'), venv('config.name')));
 venv_set('config.backups_dir', venv('BACKUPS_DIR', '/app/backups'));
+venv_set('config.log_path', venv('LOG_PATH', __DIR__ . '/app.log'));
+venv_set('config.runner', venv('RUNNER_PATH', __DIR__ . '/runner'));
+
+if (!Fs::touch(venv('config.log_path'))) {
+    throw new Exception('Log file is not writable');
+}
