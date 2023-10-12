@@ -78,7 +78,7 @@ class Daemon
         static::$last_time = static::$time;
 
         while (!static::$stop) {
-            static::$time = time();
+            static::$time = intval(date('U'));
             if (static::new()) {
                 if ($max_loop >= 0) {
                     if ($max_loop == 0) {
