@@ -4,6 +4,7 @@ namespace App;
 
 final class Fs
 {
+    static $tail = [];
     final static function join(string ...$paths): bool|string
     {
         $path = array_shift($paths);
@@ -57,5 +58,41 @@ final class Fs
         }
 
         return realpath($path);
+    }
+
+    final static function tail(string $path, int $seek = -1): int
+    {
+        $modified = null;
+
+        if (isset(static::$tail[$path])) {
+            [$rseek, $modified] = static::$tail[$path];
+            if ($seek < 0) {
+                $seek = $rseek;
+            }
+        } else {
+            $seek = 0;
+        }
+
+        clearstatcache(true, $path);
+        $last_modified = filemtime($path);
+
+        if (!file_exists($path)) {
+            echo "File not found: $path" . PHP_EOL;
+        }
+
+        if ($modified !== $last_modified) {
+            $h = fopen($path, 'r');
+            fseek($h, $seek);
+            $buffer = '';
+            while (!feof($h)) {
+                $buffer .= fread($h, 8192);
+            }
+            $seek = intval(ftell($h));
+            fclose($h);
+            static::$tail[$path] = [$seek, $last_modified];
+            print $buffer;
+        }
+
+        return $seek;
     }
 }
