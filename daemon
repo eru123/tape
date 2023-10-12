@@ -4,29 +4,42 @@ require __DIR__ . '/autoload.php';
 
 use App\Daemon;
 use App\Backup;
-use App\Crontab;
-use eru123\venv\VirtualEnv;
+use App\Fs;
 
 $path = venv('config.path');
+$date = date('Y-m-d H:i:s');
+
 if (!$path) {
-    throw new Exception('Config path not found');
+    echo "[$date] Daemon: Config not found. Exiting..." . PHP_EOL;
+    exit(1);
+}
+
+echo "[$date] Daemon: Current timezone is " . date_default_timezone_get() . PHP_EOL;
+
+if (venv('config.data.timezone')) {
+    date_default_timezone_set(venv('config.data.timezone'));
+    venv_set('config.last_timezone', venv('config.data.timezone'));
+    $date = date('Y-m-d H:i:s');
+    echo "[$date] Daemon: Timezone set to " . venv('config.data.timezone') . PHP_EOL;
 }
 
 $h = fopen(venv('config.log_path'), 'w');
 fclose($h);
 
 Daemon::precallback(function () use ($path) {
+    Fs::tail(venv('config.log_path'));
+
     clearstatcache(true, $path);
     $last_modified = filemtime($path);
-    $date = DateTime::createFromFormat('U', time())->format('Y-m-d H:i:s');
+    $date = date('Y-m-d H:i:s');
     if (venv('config.last_modified') === $last_modified) {
         return;
     }
 
     if (venv('config.last_modified') === null) {
-        echo "[$date] Initialized" . PHP_EOL;
+        echo "[$date] Daemon: Initialized" . PHP_EOL;
     } else {
-        echo "[$date] Config changes detected. Reloading..." . PHP_EOL;
+        echo "[$date] Daemon: Config changes detected." . PHP_EOL;
     }
 
     Daemon::clear();
@@ -40,6 +53,12 @@ Daemon::precallback(function () use ($path) {
     venv_set('config.data', is_array($data) ? $data : []);
     unset($data);
     venv_set('config.last_modified', $last_modified);
+
+    if (venv('config.last_timezone') !== venv('config.data.timezone')) {
+        date_default_timezone_set(venv('config.data.timezone'));
+        venv_set('config.last_timezone', venv('config.data.timezone'));
+        echo "[$date] Daemon: Timezone set to " . venv('config.data.timezone') . PHP_EOL;
+    }
 
     $backups = venv('config.data.backups', []);
     $providers = venv('config.data.providers', []);
