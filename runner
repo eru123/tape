@@ -4,6 +4,11 @@ require __DIR__ . '/autoload.php';
 
 use App\Backup;
 
+if (venv('config.data.timezone')) {
+    date_default_timezone_set(venv('config.data.timezone'));
+    venv_set('config.last_timezone', venv('config.data.timezone'));
+}
+
 $args = isset($argv) ? $argv : [];
 $id = end($args);
 
@@ -15,7 +20,7 @@ try {
 } catch (Throwable $e) {
     ob_end_clean();
     $output = $e->getMessage() . PHP_EOL . $e->getTraceAsString();
-    $date = DateTime::createFromFormat('U', time())->format('Y-m-d H:i:s');
+    $date = date('Y-m-d H:i:s');
     echo "[$date] ". trim($output) . PHP_EOL;
     echo trim($output) . PHP_EOL;
     exit(1);
