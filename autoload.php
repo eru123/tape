@@ -12,6 +12,17 @@ venv_set('config.backups_dir', venv('BACKUPS_DIR', '/app/backups'));
 venv_set('config.log_path', venv('LOG_PATH', __DIR__ . '/app.log'));
 venv_set('config.runner', venv('RUNNER_PATH', __DIR__ . '/runner'));
 
+$h = fopen(venv('config.path'), 'r');
+if(!!$h) {
+    $buffer = '';
+    while (!feof($h))
+        $buffer .= fread($h, 8192);
+    fclose($h);
+    venv_set('config.data', json_decode($buffer, true));
+    unset($buffer);
+}
+unset($h);
+
 if (!Fs::touch(venv('config.log_path'))) {
     throw new Exception('Log file is not writable');
 }
