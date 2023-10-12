@@ -12,6 +12,9 @@ if (!$path) {
     throw new Exception('Config path not found');
 }
 
+$h = fopen(venv('config.log_path'), 'w');
+fclose($h);
+
 Daemon::precallback(function () use ($path) {
     clearstatcache(true, $path);
     $last_modified = filemtime($path);
