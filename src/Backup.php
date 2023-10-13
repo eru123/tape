@@ -195,7 +195,7 @@ final class Backup
 
         if (class_exists($provider['class'])) {
             $result = call_user_func_array([$provider['class'], 'upload'], [$provider, $backup_obj]);
-            if ($result === true) {
+            if ($result === true || is_array($result)) {
                 static::info($title, "Backup file uploaded");
             } else {
                 static::error($title, "Failed to upload backup file: $result");
