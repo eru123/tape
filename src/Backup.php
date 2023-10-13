@@ -131,8 +131,13 @@ final class Backup
             }
 
             $zip = new ZipArchive();
-            $zip->open($file, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+            if (!$zip->open($file, ZipArchive::CREATE | ZipArchive::OVERWRITE)) {
+                static::error($title, "Failed to create backup file. Exiting...");
+                return;
+            }
+
             $zip->addEmptyDir($name);
+            $password = A::get($backup, 'password');
             $added_file_count = 0;
             foreach ($inc as $value) {
                 $realpath = realpath($value);
@@ -153,12 +158,16 @@ final class Backup
                 }
 
                 $zip->addFile($realpath, $name . '/' . basename($realpath));
-                $added_file_count++;
-            }
+                if ($zip->status !== ZipArchive::ER_OK) {
+                    static::error($title, "Failed to add file: $value");
+                    continue;
+                }
 
-            $password = A::get($backup, 'password');
-            if ($password) {
-                $zip->setPassword($password);
+                if ($password) {
+                    $zip->setEncryptionName($name . '/' . basename($realpath), ZipArchive::EM_AES_256, $password);
+                }
+                
+                $added_file_count++;
             }
 
             $zip->close();
@@ -182,6 +191,17 @@ final class Backup
         if (!$backup_obj) {
             static::error($title, "Failed to create backup. Exiting...");
             return;
+        }
+
+        if (class_exists($provider['class'])) {
+            $result = call_user_func_array([$provider['class'], 'upload'], [$provider, $backup_obj]);
+            if ($result === true) {
+                static::info($title, "Backup file uploaded");
+            } else {
+                static::error($title, "Failed to upload backup file: $result");
+            }
+        } else {
+            static::error($title, "Provider class not found");
         }
 
         if (!A::get($backup, 'persistent', false) && !A::get($backup, 'persist', false)) {
