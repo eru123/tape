@@ -36,7 +36,7 @@ class S3
             ]);
 
             fclose($f);
-            return $res;
+            return $res->toArray();
         } catch (S3Exception $e) {
             return $e->getMessage();
         }
