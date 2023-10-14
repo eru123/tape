@@ -95,3 +95,24 @@ services:
     }
 }
 ```
+
+### Non-docker
+For non docker users, you can clone this repository and install dependencies using composer.
+#### Requirements
+ - PHP 8.1 - should be installed as user `/usr/bin/php`
+     - php-posix
+     - php-pcntl
+     - php-curl
+     - php-zip
+     - php-mbstring
+     - php-xml
+     - Please add more if I missed something (still in development)
+ - Composer
+
+#### Run
+```bash
+cd /path/to/tape
+/usr/bin/php daemon
+# if permission denied, try with sudo
+# Tested on Ubuntu 20.04
+```
