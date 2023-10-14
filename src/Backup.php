@@ -5,6 +5,8 @@ namespace App;
 use DateTime;
 use Exception;
 use ZipArchive;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use eru123\venv\VirtualEnv as A;
 
 final class Backup
@@ -36,22 +38,49 @@ final class Backup
 
             $logfile = venv('config.log_path', '/app/app.log');
             $runner = venv('config.runner', '/app/runner');
-            $cmdp = Cmd::cmdp("/bin/env php $runner $id >> $logfile 2>&1 &");
-            echo "[$date] $id: matched" . PHP_EOL;
+            $cmdp = Cmd::cmdp("/usr/bin/php $runner $id >> $logfile 2>&1 &");
+            static::info($id, "Starting");
             shell_exec($cmdp);
         };
+    }
+
+    private static function append_file($file, $content)
+    {
+        $fp = fopen($file, 'a');
+        fwrite($fp, $content);
+        fclose($fp);
     }
 
     final static function info($id, $message)
     {
         $date = date('Y-m-d H:i:s');
-        echo "[$date] INFO: $id: " . trim($message) . PHP_EOL;
+        $msg = "[$date] INFO: $id: " . trim($message) . PHP_EOL;
+        static::append_file(venv('config.log_path', '/app/app.log'), $msg);
     }
 
     final static function error($id, $message)
     {
         $date = date('Y-m-d H:i:s');
-        echo "[$date] ERROR: $id: " . trim($message) . PHP_EOL;
+        $msg = "[$date] ERROR: $id: " . trim($message) . PHP_EOL;
+        static::append_file(venv('config.log_path', '/app/app.log'), $msg);
+    }
+
+    private static function should_exclude($path, $exclude)
+    {
+        foreach ($exclude as $v) {
+            if (strpos($path, $v) === 0) {
+                return true;
+            }
+
+            $v = preg_quote($v, '/');
+            $v = str_replace('\*', '.*', $v);
+
+            if (preg_match("/^$v$/", $path)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     final static function runner($id)
@@ -146,28 +175,62 @@ final class Backup
                     continue;
                 }
 
-                foreach ($exc as $rgx) {
-                    $rgx = str_replace('/', '\/', $rgx);
-                    $rgx = str_replace('.', '\.', $rgx);
-                    $rgx = str_replace('*', '.*', $rgx);
-                    $rgx = str_replace('?', '.', $rgx);
-                    $rgx = '/^' . $rgx . '$/';
-                    if (preg_match($rgx, $realpath)) {
-                        continue 2;
-                    }
-                }
-
-                $zip->addFile($realpath, $name . '/' . basename($realpath));
-                if ($zip->status !== ZipArchive::ER_OK) {
-                    static::error($title, "Failed to add file: $value");
+                if (static::should_exclude($realpath, $exc)) {
                     continue;
                 }
 
-                if ($password) {
-                    $zip->setEncryptionName($name . '/' . basename($realpath), ZipArchive::EM_AES_256, $password);
+                if (is_file($realpath)) {
+                    $zip->addFile($realpath, $name . '/' . basename($realpath));
+                    if ($zip->status !== ZipArchive::ER_OK) {
+                        static::error($title, "Failed to add file: $value");
+                        continue;
+                    }
+
+                    if ($password) {
+                        $zip->setEncryptionName($name . '/' . basename($realpath), ZipArchive::EM_AES_256, $password);
+                    }
+                    
+                    $added_file_count++;
+                } else if (is_dir($realpath)) {
+                    $zip->addEmptyDir($name . '/' . basename($realpath));
+                    if ($zip->status !== ZipArchive::ER_OK) {
+                        static::error($title, "Failed to add directory: $value");
+                        continue;
+                    }
+
+                    $files = new RecursiveIteratorIterator(
+                        new RecursiveDirectoryIterator($realpath),
+                        RecursiveIteratorIterator::LEAVES_ONLY
+                    );
+
+                    foreach ($files as $f) {
+                        if (!$f->isDir()) {
+                            $filepath = $f->getRealPath();
+
+                            if (static::should_exclude($filepath, $exc)) {
+                                continue;
+                            }
+
+                            $relative = substr($filepath, strlen($realpath) + 1);
+                            
+                            if (empty($filepath) || empty($relative)) {
+                                continue;
+                            }
+                            
+                            $zip->addFile($filepath, $name . '/' . basename($realpath) . '/' . $relative);
+                            if ($zip->status !== ZipArchive::ER_OK) {
+                                static::error($title, "Failed to add file: $value");
+                                continue;
+                            }
+
+                            if ($password) {
+                                $zip->setEncryptionName($name . '/' . basename($realpath) . '/' . $relative, ZipArchive::EM_AES_256, $password);
+                            }
+
+                            $added_file_count++;
+                        }
+                    }
                 }
-                
-                $added_file_count++;
             }
 
             $zip->close();
