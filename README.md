@@ -1,10 +1,13 @@
 # Tape
 Tape is a backup solution designed to customize your system and database backup to major storage providers and protocols
 
-### Note
+## Note
 This project is still in development and is made for creator's personal use. Use at your own risk.
 
 Currently, only supports S3 compatible storage providers for uploading backups. You can enable persistent backups by setting the `persistent` option to `true` in your config file. So that the backup will not be deleted after uploading to the storage provider. Alternatively, You can use the none provider to disable uploading to storage provider.
+
+## For Developers
+Please feel free to contribute, every ideas are welcome. Currently no policy for PRs/issues. If you review the structures of the code, I make it minimal as much as possible and intentionally adds a provider plugin system that are not heavenly customizable because I want to use it as soon as possible, if you are about to create a provider that have complex requirements such as validation, pre/post function, please consider changing that first as you see fit. Hope you have fun poking in the system!.
 
 ### Features
  - [ ] Upload support for more storage providers
