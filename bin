@@ -1,0 +1,5 @@
+#!/bin/env sh
+
+printenv > /app/.env
+echo "" > /app/app.log
+/usr/bin/php /app/daemon
