@@ -1,5 +1,8 @@
 <?php
 
+ini_set('post_max_size', '-1');
+ini_set('upload_max_filesize', '-1');
+
 require __DIR__ . '/autoload.php';
 
 use App\Backup;
@@ -16,7 +19,12 @@ try {
     ob_start();
     Backup::runner($id);
     $output = ob_get_clean();
-    echo trim($output) . PHP_EOL;
+    $date = date('Y-m-d H:i:s');
+    if (empty(trim($output))) {
+        $output = "[$date] $id: exited";
+    } else {
+        echo trim($output) . PHP_EOL;
+    }
 } catch (Throwable $e) {
     ob_end_clean();
     $output = $e->getMessage() . PHP_EOL . $e->getTraceAsString();
