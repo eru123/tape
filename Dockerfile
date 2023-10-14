@@ -37,4 +37,4 @@ RUN composer install -o
 
 COPY . .
 
-ENTRYPOINT ["/bin/env", "php", "/app/daemon"]
+ENTRYPOINT ["/bin/sh", "/app/bin"]
